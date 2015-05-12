@@ -3,6 +3,7 @@ import numpy as np
 from astropy.time import Time
 from astropy.time import TimeDelta
 import matplotlib.pyplot as plt
+import pandas as pd
 '''
 Python program to calculate upcoming EB eclipse times and durations.
 Useful for figuring out when to observe, or not.
@@ -28,19 +29,25 @@ the desired exposure times, etc. in this program if you care about the latter.)
 Read the damn comments, Jean.
 '''
 
+# Put your desired start and end dates in UTC here!!!
+startdate = '2015-07-01 00:00'
+enddate = '2015-09-30 00:00'
+startshort = startdate[0:10]
+endshort = enddate[0:10]
+
+infile = '../../1m_observations/RGEB_info_alpha.txt'		# infile you must provide
+outfile1 = '../../1m_observations/eclipses_2015_Q3.txt'	# human-friendly outfile
+outfile2 = '../../1m_observations/RGEB_1m_2015_test.inp' 	# 1m telescope friendly outfile
+
 # Function to make a 2D list without stabbing your eye out
 def make2dList(rows, cols):
     a=[]
     for row in xrange(rows): a += [[0]*cols]
     return a
 
-infile = '../../1m_observations/RGEB_info_alpha.txt'		# infile you must provide
-outfile1 = '../../1m_observations/eclipses_2015_Q3.txt'	# human-friendly outfile
-outfile2 = '../../1m_observations/RGEB_1m_2015_test.inp' 	# 1m telescope friendly outfile
-
 # Create a list of possible observation times
-obs_tstart = Time('2015-07-01 00:00', format='iso', scale='utc')
-obs_tend = Time('2015-09-30 00:00', format='iso', scale='utc')
+obs_tstart = Time(startdate, format='iso', scale='utc')
+obs_tend = Time(enddate, format='iso', scale='utc')
 obs_deltat = TimeDelta(0.5, format='jd')
 # arbitrary fraction-of-a-day time resolution... 0.5 is probably sufficient for eclipse
 # durations ~1 day (?)
@@ -79,6 +86,7 @@ pri_eclipse_start = make2dList(len(kic), len(tobs))
 pri_eclipse_end = make2dList(len(kic), len(tobs))
 sec_eclipse_start = make2dList(len(kic), len(tobs))
 sec_eclipse_end = make2dList(len(kic), len(tobs))
+
 for j in range(0,len(kic)):
 	# Find the most recent bjd0 time right BEFORE the observation window of interest
 	newbjd0_float.append( np.floor((obs_tstart.jd - bjd0[j].jd)/porb[j].value) * porb[j].value + bjd0[j].jd )
@@ -141,6 +149,18 @@ plt.yticks(range(1,len(kic)+1), ['%.0f' % a for a in kic])
 tplotstart = obs_tstart
 tplotend = obs_tend
 plt.axis([tplotstart.plot_date, tplotend.plot_date, 0, len(kic)+1])
+
+# Shade regions in plot corresponding to approximately A half and B half
+# (this part written by Jean)
+datelist = pd.date_range(start=startshort, end=endshort, freq='6H')
+for k in range(0,len(datelist)):
+	if k % 4 == 0:
+		plt.bar(datelist[k], height=25, width=.25, color='silver', edgecolor='silver')
+		# Height is a function of how many stars are being plotted
+		# Width is 0.25 because it's a quarter of a day (6 hours)
+	if k % 4 == 1:
+		plt.bar(datelist[k], height=25, width=.25, color='grey', edgecolor='grey')
+
 # epic loop for plotting AND writing info to files
 for j in range(0,len(kic)):
 	# Calculate how many times to repeat the sequence for ~30 min (1800 sec)
