@@ -7,8 +7,6 @@ import astropy.coordinates as coord
 import astropy.units as u
 from astropy.time import Time
 from astropy.time import TimeDelta
-import sys
-import glob
 import os
 '''
 Read in 1m observation metadata to figure out:
@@ -17,8 +15,9 @@ Read in 1m observation metadata to figure out:
 - some kind of image preview or quality flag (NOT IMPLEMENTED YET)
 - make a plot of this info
 
-To work, this program needs to be in a directory containing subdirectories that are
-dates (e.g. 150212), and inside those are FITS files and metadata-like text files.
+To work, this program needs to be saved somewhere that can see imagedir and reffile.
+It assumes there are date-formatted subdirectories in imagedir (e.g. 150212) with FITS
+files saved in them. Some of those FITS files might be for targets we don't care about.
 '''
 imagedir = '/mnt/mrawls/1m_obs/'
 reffile = 'RGEB_info_alpha.txt'
@@ -31,7 +30,7 @@ fulldirs = [imagedir+x+'/' for x in dirs]
 refdata = ascii.read(reffile)
 KICs = refdata['col1']
 Porbs = refdata['col2']
-BJD0s = Time(refdata['col3']
+BJD0s = refdata['col3']
 RAs = refdata['col7']
 Decs = refdata['col8']
 # Create astropy Time objects for the zeropoints and orbital periods
