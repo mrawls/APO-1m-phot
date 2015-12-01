@@ -16,6 +16,8 @@ Meredith Rawls, Fall 2015
 NOTE: you likely need to manually edit the "filter" column so there are no spaces!
 NOTE: you need to ensure that each image filename begins with yymmdd!
 NOTE: if any of the file index numbers are > 999, you might have an interesting time!
+(you'll need to manually edit the flat.b, flat.v, flat.r, and flat.i files so there is a
+ space between the index of the first flat and the last flat. otherwise, I think it works.)
 
 Goal of this program: for one target star, do basic image reductions on APO 1m images.
 (This means overscan (bias) subtraction and flat field division.)
@@ -25,27 +27,27 @@ Save the reduced images in a single directory for that target.
 ***!!LOOK AT THE IMAGES IT MADE AND DECIDE IF THERE ARE SOME SNEAKY GARBAGE ONES OR NOT!!
 ***Then, run this program once again for each target with FlatDivide = True.
 
-INPUT: - folders named yymmdd in 'workingdir' with images that are named yymmdd.xxx.fits
-       - many (not all) folders must contain flat field images, and text files that 
-       indicate which images are flats
-       - 'imginventory_list.txt' which you can make by running 'imginventory.py' first
-       (see important NOTES above)
-       - target name corresponding to first column in 'imginventory_list.txt'
-       - FlatDivide flag (only set to True once all combined flat field images exist)
+INPUT:  - folders named yymmdd in 'workingdir' with images that are named yymmdd.xxx.fits
+        - many (not all) folders must contain flat field images, and text files that 
+        indicate which images are flats
+        - inventoryfile which you can make by running 'imginventory.py' first
+        (see important NOTES above)
+        - target name corresponding to first column in 'imginventory_list.txt'
+        - FlatDivide flag (only set to True once all combined flat field images exist)
 
-OUTPUT: - after first set of runs, combined median flat field images, with one
+OUTPUT: - after first set of runs, combined average flat field images, with one
           assigned to each target image
         - after second set of runs, reduced images organized by target folder
         (you can customize these folder names as desired near the end of the program)
 
 '''
-target = '3955867'
+#target = '3955867'
 #target = '4569590'
 #target = '5179609'
 #target = '5308778'
 #target = '5640750'
 #target = '5786154'
-#target = '7037405'
+target = '7037405'
 #target = '7377422'
 #target = '7943602'
 #target = '8054233'
@@ -88,9 +90,10 @@ for object, time, eclipse, filter, fullfilepath in zip(allobjects, alltimes, all
         fullfilepaths.append(fullfilepath)
 
 ## Identify the corresponding flat field images for each target
-## Create a median flat with FLATCOMBINE
+## Create an average flat with FLATCOMBINE
 ## If no flat field images exist in the present directory, ### NOT SURE WHAT TO DO ###
 flatfiles = [] # will be a parallel list to fullfilepaths containing combined flats
+normflatfiles = [] # same as above for normalized combined flats
 for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):   
     if fullfilepath[-9] != '.': # file index is > 999
         dir = fullfilepath[0:-16]
@@ -113,7 +116,9 @@ for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):
         print('ERROR: flatfield image not assigned for {0}'.format(fullfilepath[-15:]))
         flatid = dir + 'NONE'
     # This is the name of the combined flat we will create (if we haven't already)
-    fullflatpath = flatid + '_median.fits'   
+    # (And the normalized combined flat too!)
+    fullflatpath = flatid + '_average.fits'
+    normflatpath = fullflatpath[0:-5] + '_norm.fits'
     ## This try-except-else-finally section creates and remembers a *combined* flat image 
     try:    # see if the combined flat already exists
         fits.open(fullflatpath)
@@ -139,13 +144,19 @@ for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):
                 except:
                     continue
                 else:
-                    fullflatpath = testflatpath + '_median.fits'
+                    fullflatpath = testflatpath + '_average.fits'
                     print('--> Using {0} instead'.format(fullflatpath))
                     break
         else: # if the flatid file DOES exist, we need to make a combined flat
             with open(flatid) as f1: # open flatid to learn which images to combine
-                imstart, imend = np.loadtxt(f1, usecols=(0,1))
-                imstart = int(imstart); imend = int(imend)
+                imstart, imend = np.loadtxt(f1, usecols=(0,1), unpack=True)
+                try:
+                    imstart = int(imstart); imend = int(imend)
+                except: # more than one sequence of flats; assume the last one is good
+                    imstart = int(imstart[-1]); imend = int(imend[-1])
+                finally:
+                    print(filter, imstart, imend)
+                #imstart = int(imstart[0][0:4]); imend = int(imstart[0][4:8])
             # Make a list of the flat images (one for raw, one for overscan corrected)
             flatstocombine = []; zflatstocombine = []
             for idx in range(imstart, imend+1):
@@ -158,32 +169,46 @@ for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):
             try: # see if the overscan correction has already been done
                 for zflat in zflatstocombine:
                     test = fits.open(zflat)
-                print('Overscan corrected flat fields for {0} already exist in {1}'.format(filter, dir))
             except: # if necessary, do the overscan correction
                 zflatsgood = []
                 for flat, zflat in zip(flatstocombine, zflatstocombine):
                     try: # if an *individual* flat image is damaged, this will fail
                         iraf.ccdproc('\''+flat+'\'', output='\''+zflat+'\'', ccdtype='none',
-                            noproc='no', fixpix='no', oversca='yes', trim='no', zerocor='no', 
-                            darkcor='no', flatcor='no', interactive='no', biassec=biassec)
-                        zflatsgood.append(zflat)
-                        print('Flat field image overscan corrected {0}'.format(flat))
+                            noproc='no', fixpix='no', oversca='yes', trim='yes', zerocor='no', 
+                            darkcor='no', flatcor='no', interactive='no', biassec=biassec,
+                            trimsec='image')    
                     except: # skip the problematic flat image and move on
                         print('Error accessing flat field image {0}'.format(flat))
+                    else:
+                        zflatsgood.append(zflat)
+                        print('Flat field image overscan corrected {0}'.format(flat))
+            else:
+                print('Overscan corrected flat fields for {0} already exist in {1}'.format(filter, dir))
+                zflatsgood = zflatstocombine
             zflatstring = string.join(zflatsgood, ',')
             print('Flats to combine for {0}: {1}'.format(filter, zflatstring))
-            iraf.imcombine(zflatstring, fullflatpath, 
-                combine='median', reject = 'avsigclip', mclip = 'yes')                
+            # COMBINE THE FLATS
+            iraf.imcombine(zflatstring, fullflatpath, lsigma=3., hsigma=3., nkeep=2,
+                combine='average', reject='ccdclip', weight='mode', scale='median',
+                rdnoise='5.', gain='1.9')
+            # NORMALIZE THE COMBINED FLAT
+            imstatout = iraf.imstat(fullflatpath, fields='midpt', format=0, Stdout=1)
+            median_value_of_fullflatpath = imstatout[0].split()[0]
+            iraf.imarith(fullflatpath, '/', median_value_of_fullflatpath, normflatpath,
+                divzero=0.0, noact='no')
             print('Flat field combining done for {0} in {1}'.format(filter, dir))                    
     else: # let the user know that the combined flat exists, so we will skip ahead
         print('Combined flat already exists for {0} in {1}'.format(filter, dir))                    
     finally: # at the end of this mess, save the name of the combined flat file
         flatfiles.append(fullflatpath)
+        normflatfiles.append(normflatpath)
 print(' ')
 print('That was fun! If these numbers are equal and there are no IRAF PANICs')
 print('or other errors above, you should have flats for all images.')
 print('Target: {0}'.format(target))
-print('Number of target images, assigned flats: {0}, {1}'.format(len(fullfilepaths), len(flatfiles)))
+print('Number of target images, assigned normalized flats: {0}, {1}'.format(len(fullfilepaths), len(normflatfiles)))
+#for image, flat in zip(fullfilepaths, normflatfiles):
+#    print(image[-16:], flat[-25:])
 
 
 # CCDPROC party time: overscan bias subtraction and flatfielding of targets! Finally!
@@ -192,7 +217,7 @@ if FlatDivide == True:
 ## run CCDPROC to divide each image by flat, and save a new image!
     print(' ')
     print('PROCEEDING WITH FLAT DIVISION!')
-    for image, flat, eclipse, filter in zip(fullfilepaths, flatfiles, eclipses, filters):
+    for image, flat, eclipse, filter in zip(fullfilepaths, normflatfiles, eclipses, filters):
         # picky filenames are picky
         # (they're a function of the number of digits in the target ID and image number)
         if int(target) > 9999999 and image[-9] == '.':
@@ -204,8 +229,8 @@ if FlatDivide == True:
         elif int(target) <= 9999999 and image[-9] != '.':
             flattenedimage = workingdir + 'KIC0' + target + '/' + image[-16:-5] + eclipse + filter + '.fits'
         iraf.ccdproc('\''+image+'\'', output='\''+flattenedimage+'\'', ccdtype='none',
-            noproc='no', fixpix='no', oversca='yes', trim='no', zerocor='no', 
-            darkcor='no', flatcor='yes', interactive='no', biassec=biassec, flat=flat)
+            noproc='no', fixpix='no', oversca='yes', trim='yes', zerocor='no', darkcor='no',
+            flatcor='yes', interactive='no', biassec=biassec, trimsec='image', flat=flat)
 
 
 # THE HARD PART, for another program
