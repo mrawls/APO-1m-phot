@@ -18,10 +18,16 @@ Read in 1m observation metadata to figure out:
 To work, this program needs to be saved somewhere that can see imagedir and reffile.
 It assumes there are date-formatted subdirectories in imagedir (e.g. 150212) with FITS
 files saved in them. Some of those FITS files might be for targets we don't care about.
+
+***IMPORTANT NOTE***
+You will need to manually inspect the outfile and edit it before running imagereduce.py:
+- replace each filter entry with a short (6 chars or fewer) string with no spaces
+- ensure each filename starts with '1' (some may be truncated)
 '''
-imagedir = '/mnt/mrawls/1m_obs/'
+#imagedir = '/mnt/mrawls/1m_obs/'
+imagedir = '/virgo/mrawls/1mphot/'
 reffile = 'RGEB_info_alpha.txt'
-outfile = 'imginventory_list.txt'
+outfile = 'imginventory_list3.txt'
 
 # Get the paths to the directories in imagedir which are 2014 or 2015 date format
 dirs = [x for x in os.listdir(imagedir) if x[0:2] == '14' or x[0:2] == '15']
@@ -54,19 +60,21 @@ for dir in fulldirs:
     filesindir = os.listdir(dir)
     for filename in filesindir:
         # Keep only fits files that are not guiding images
-        if filename[-4:] == ('fits' or 'FITS') and 'g.' not in filename:
+        if filename[-4:] == ('fits' or 'FITS') and 'g.' not in filename and 'flat' not in filename:
             fullfile = dir+filename
+            #print(fullfile)
             try:
-                hdu = fits.open(fullfile, ignore_missing_end = True)
+                hdu = fits.open(fullfile, ignore_missing_end = True)    
+            except:
+                print('Error accessing {0}'.format(fullfile))
+                continue
+            else:
                 dateobs.append(hdu[0].header['date-obs'])
                 UTobs.append(hdu[0].header['UT'])
                 RAobs.append(hdu[0].header['RA'])
                 Decobs.append(hdu[0].header['Dec'])
                 filtnameobs.append(hdu[0].header['filtname'][0:17])
                 filenamesave.append(fullfile)
-            except:
-                print('Error accessing {0}'.format(fullfile))
-                continue
 
 # Put RA and Dec values into less annoying formats
 print('Done reading image files')
