@@ -42,12 +42,12 @@ OUTPUT: - after first set of runs, combined average flat field images, with one
 
 '''
 #target = '3955867'
-#target = '4569590'
+target = '4569590'
 #target = '5179609'
 #target = '5308778'
 #target = '5640750'
 #target = '5786154'
-target = '7037405'
+#target = '7037405'
 #target = '7377422'
 #target = '7943602'
 #target = '8054233'
@@ -61,10 +61,10 @@ target = '7037405'
 #target = '10001167'
 
 workingdir =    '/virgo/mrawls/1mphot/'     # assumes everything is in this directory
-inventoryfile = 'imginventory_list2.txt'    # output file from imginventory.py
+inventoryfile = 'imginventory_list3.txt'    # output file from imginventory.py
 biassec = '[2110:2200,1:2048]'  # set colstart:colend, rowstart:rowend for overscan region
 
-FlatDivide = False #True
+FlatDivide =  True
 # set to True once you've run the program once for all targets with it set to False
 # (this way you won't try to divide by combined flat field images that don't exist yet)
 
@@ -133,7 +133,11 @@ for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):
             # --> try accessing flatid files in dir with date-1, date+1...
             # --> continue this process until a flatid file is found
             datestring = '20'+date[0:2]+'-'+date[2:4]+'-'+date[4:6] # shoot me
-            dts = [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8, -9, 9]           
+            dts = [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8, -9, 9, -10, 10,
+                    -11, 11, -12, 12, -13, 13, -14, 14, -15, 15, -16, 16, -17, 17, -18, 18,
+                    -19, 19, -20, 20, -21, 21, -22, 22, -23, 23, -24, 24, -25, 25, -26, 26,
+                    -27, 27, -28, 28, -29, 29, -30, 30, -31, 31, -32, 32, -33, 33, -34, 34,
+                    -35, 35, -36, 36, -37, 37, -38, 38, -39, 39, -40, 40, -41, 41, -42, 42]           
             for dt in dts:
                 newdate = Time(datestring, in_subfmt='date') + TimeDelta(dt, format='jd')
                 newdate = str(newdate)[2:4]+str(newdate)[5:7]+str(newdate)[8:10]
@@ -142,9 +146,11 @@ for index, (fullfilepath, filter) in enumerate(zip(fullfilepaths, filters)):
                 try:
                     open(testflatpath)
                 except:
+                    #print('NO FLAT FIELD ASSIGNED, tried {0}'.format(testflatpath[-16:]))
                     continue
                 else:
                     fullflatpath = testflatpath + '_average.fits'
+                    normflatpath = fullflatpath[0:-5] + '_norm.fits'
                     print('--> Using {0} instead'.format(fullflatpath))
                     break
         else: # if the flatid file DOES exist, we need to make a combined flat
@@ -207,8 +213,9 @@ print('That was fun! If these numbers are equal and there are no IRAF PANICs')
 print('or other errors above, you should have flats for all images.')
 print('Target: {0}'.format(target))
 print('Number of target images, assigned normalized flats: {0}, {1}'.format(len(fullfilepaths), len(normflatfiles)))
+
 #for image, flat in zip(fullfilepaths, normflatfiles):
-#    print(image[-16:], flat[-25:])
+#    print(image[-16:], flat[-31:])
 
 
 # CCDPROC party time: overscan bias subtraction and flatfielding of targets! Finally!
@@ -228,9 +235,19 @@ if FlatDivide == True:
             flattenedimage = workingdir + 'KIC' + target + '/' + image[-16:-5] + eclipse + filter + '.fits'
         elif int(target) <= 9999999 and image[-9] != '.':
             flattenedimage = workingdir + 'KIC0' + target + '/' + image[-16:-5] + eclipse + filter + '.fits'
-        iraf.ccdproc('\''+image+'\'', output='\''+flattenedimage+'\'', ccdtype='none',
-            noproc='no', fixpix='no', oversca='yes', trim='yes', zerocor='no', darkcor='no',
-            flatcor='yes', interactive='no', biassec=biassec, trimsec='image', flat=flat)
+        try:
+            fits.open(flat, ignore_missing_end=True)
+        except:
+            print('ERROR cannot access assigned flat {0}!'.format(flat))
+        else:
+            try:
+                fits.open(flattenedimage, ignore_missing_end=True)
+            except:
+                iraf.ccdproc('\''+image+'\'', output='\''+flattenedimage+'\'', ccdtype='none',
+                    noproc='no', fixpix='no', oversca='yes', trim='no', zerocor='no', darkcor='no',
+                    flatcor='yes', interactive='no', biassec=biassec, flat=flat)
+            else:
+                print('Image already processed {0}'.format(flattenedimage))
 
 
 # THE HARD PART, for another program
