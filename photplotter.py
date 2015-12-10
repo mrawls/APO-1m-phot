@@ -17,9 +17,10 @@ Makes plots of magnitude vs. phase.
 dir = '../../1m_observations/KIC03955867/'
 txdump_file = 'phot_take8.txt'
 photcoord_file = 'photcoords5.txt'
+outfile = 'BVRI_diffmag_LC.txt'
 period = 33.659962; BJD0 = 54960.866328 # 3955867
 aperturelist = [1,1,3,3,2,4,4] # which aperture to use? set 1, 2, 3, or 4 FOR EACH STAR
-compstars_good = [0,1,2,3,4  ] # which comparison stars are OK? at most [0,1,2,3,4,5]
+compstars_good = [0,1,2,  4  ] # which comparison stars are OK? at most [0,1,2,3,4,5]
 compplot = True # set whether to plot comparison star LCs or not
 
 # read in the coordinate file you used to do photometry
@@ -163,8 +164,44 @@ merrIcomplist.extend([Iinfo[3][1], Iinfo[3][2], Iinfo[3][3], Iinfo[3][4], Iinfo[
 magIcomps, merrIcomps = compstarcombine('I', otimeIs, magIcomplist, merrIcomplist, plot = compplot)
 diffIs, diffIerrs = diffmagcalculate(magIs, merrIs, magIcomps, merrIcomps)
 
+# Write results to file
+f1 = open(dir+outfile, 'w')
+print('# B filter', file=f1)
+print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeBs, phaseBs, magBs, merrBs, magBcomps, merrBcomps, diffBs, diffBerrs):
+    print(time, phase, 'B', mag, merr, comp, cerr, diff, derr, file=f1)
+print('# V filter', file=f1)
+print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeVs, phaseVs, magVs, merrVs, magVcomps, merrVcomps, diffVs, diffVerrs):
+    print(time, phase, 'V', mag, merr, comp, cerr, diff, derr, file=f1)
+print('# R filter', file=f1)
+print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeRs, phaseRs, magRs, merrRs, magRcomps, merrRcomps, diffRs, diffRerrs):
+    print(time, phase, 'R', mag, merr, comp, cerr, diff, derr, file=f1)
+print('# I filter', file=f1)
+print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeIs, phaseIs, magIs, merrIs, magIcomps, merrIcomps, diffIs, diffIerrs):
+    print(time, phase, 'I', mag, merr, comp, cerr, diff, derr, file=f1)
+print('Data written to {0}', outfile)
+f1.close()
+
 # Plot magnitude vs. orbital phase for all four filters
-plt.axis([0, 1, 1, -2.5])
+axtop = plt.subplot(2,1,1)
+axtop.set_ylim([-0.5, -2])
+plt.xlabel('Time (JD-2400000)')
+plt.ylabel('Differental Mag')
+plt.errorbar(otimeBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
+plt.errorbar(otimeVs, diffVs, yerr=diffVerrs, ls='None', marker='o', color='g', label='V')
+plt.errorbar(otimeRs, diffRs, yerr=diffRerrs, ls='None', marker='o', color='r', label='R')
+plt.errorbar(otimeIs, diffIs, yerr=diffIerrs, ls='None', marker='o', color='k', label='I')
+
+plt.errorbar(otimeBs, magBcomps, yerr=merrBcomps, ls='None', marker='o', color='c', label='Bcomp')
+plt.errorbar(otimeVs, magVcomps, yerr=merrVcomps, ls='None', marker='o', color='y', label='Vcomp')
+plt.errorbar(otimeRs, magRcomps, yerr=merrRcomps, ls='None', marker='o', color='m', label='Rcomp')
+plt.errorbar(otimeIs, magIcomps, yerr=merrIcomps, ls='None', marker='o', color='0.75', label='Icomp')
+
+axbot = plt.subplot(2,1,2)
+plt.axis([0, 1, -0.5, -2])
 plt.xlabel('Orbital Phase')
 plt.ylabel('Differental Mag')
 plt.errorbar(phaseBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
@@ -172,15 +209,15 @@ plt.errorbar(phaseVs, diffVs, yerr=diffVerrs, ls='None', marker='o', color='g', 
 plt.errorbar(phaseRs, diffRs, yerr=diffRerrs, ls='None', marker='o', color='r', label='R')
 plt.errorbar(phaseIs, diffIs, yerr=diffIerrs, ls='None', marker='o', color='k', label='I')
 
-plt.plot(phaseBs, magBs, ls='None', marker='o', color='b')
-plt.plot(phaseVs, magVs, ls='None', marker='o', color='g')
-plt.plot(phaseRs, magRs, ls='None', marker='o', color='r')
-plt.plot(phaseIs, magIs, ls='None', marker='o', color='k')
+#plt.plot(phaseBs, magBs, ls='None', marker='o', color='b')
+#plt.plot(phaseVs, magVs, ls='None', marker='o', color='g')
+#plt.plot(phaseRs, magRs, ls='None', marker='o', color='r')
+#plt.plot(phaseIs, magIs, ls='None', marker='o', color='k')
 
-plt.plot(phaseBs, magBcomps, ls='None', marker='o', color='c', label='Bcomp')
-plt.plot(phaseVs, magVcomps, ls='None', marker='o', color='y', label='Vcomp')
-plt.plot(phaseRs, magRcomps, ls='None', marker='o', color='m', label='Rcomp')
-plt.plot(phaseIs, magIcomps, ls='None', marker='o', color='0.75', label='Icomp')
+plt.errorbar(phaseBs, magBcomps, yerr=merrBcomps, ls='None', marker='o', color='c', label='Bcomp')
+plt.errorbar(phaseVs, magVcomps, yerr=merrVcomps, ls='None', marker='o', color='y', label='Vcomp')
+plt.errorbar(phaseRs, magRcomps, yerr=merrRcomps, ls='None', marker='o', color='m', label='Rcomp')
+plt.errorbar(phaseIs, magIcomps, yerr=merrIcomps, ls='None', marker='o', color='0.75', label='Icomp')
 
 #plt.legend()
 plt.show()
