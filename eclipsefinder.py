@@ -30,14 +30,14 @@ Read the damn comments, Jean.
 '''
 
 # Put your desired start and end dates in UTC here!!!
-startdate = '2015-07-01 00:00'
-enddate = '2015-09-30 00:00'
+startdate = '2015-10-08 00:00'
+enddate = '2015-12-31 00:00'
 startshort = startdate[0:10]
 endshort = enddate[0:10]
 
 infile = '../../1m_observations/RGEB_info_alpha.txt'		# infile you must provide
-outfile1 = '../../1m_observations/eclipses_2015_Q3.txt'	# human-friendly outfile
-outfile2 = '../../1m_observations/RGEB_1m_2015_test.inp' 	# 1m telescope friendly outfile
+outfile1 = '../../1m_observations/eclipses_2015_OctDec.txt'	# human-friendly outfile
+outfile2 = '../../1m_observations/RGEB_1m_2015_OctDec.inp' 	# 1m telescope friendly outfile
 
 # Function to make a 2D list without stabbing your eye out
 def make2dList(rows, cols):
