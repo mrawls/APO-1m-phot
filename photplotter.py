@@ -2,26 +2,39 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 '''
-Meredith Rawls, Dec 2015
+Meredith Rawls, 2015
 
-Take some TXDUMP-ed files from PHOT, with these extracted fields:
+After running PHOT in IRAF, this program does differential photometry!
+
+INPUT:
+A TXDUMP-ed text file created from a set of IRAF PHOT outfiles.
+
+You should run TXDUMP with these extracted fields on *.mag.1 (or *.mag.2, or whatever):
     --> IMAGE, XINIT, YINIT, OTIME, IFILTER, RAPERT, MAG, MERR
-(For now, assume there are four apertures all printed out together.)
-(Manually replace any INDEF entries with NAN.)
 
-TODO: write out results to file!
+We assume there are FOUR apertures used, ONE target star, and SIX comparison stars.
+If your needs differ, you'll need to manually edit the code. There are comments to help.
 
-Makes plots of magnitude vs. phase.
+!! You must manually replace any INDEF entries with NAN !! (sorry, numpy is a punk)
 
+OUTPUT:
+Intermediate plots of comparison star magnitudes.
+Plots of the target star's differential magnitude vs. time and phase.
+(The comparison star instrumental magnitudes are also plotted if you span way down! fun!)
+Outfile containing differential photometry data.
 '''
-dir = '../../1m_observations/KIC03955867/'
-txdump_file = 'phot_take8.txt'
-photcoord_file = 'photcoords5.txt'
-outfile = 'BVRI_diffmag_LC.txt'
+
+# EDIT THIS STUFF AS DESIRED!!!
+dir =               '../../1m_observations/KIC03955867/'
+txdump_file =       'phot_take8.txt'
+photcoord_file =    'photcoords5.txt'
+outfile =           'BVRI_diffmag_LC.txt'
 period = 33.659962; BJD0 = 54960.866328 # 3955867
-aperturelist = [1,1,3,3,2,4,4] # which aperture to use? set 1, 2, 3, or 4 FOR EACH STAR
+aperturelist = [1,1,3,3,2,4,4] # which aperture to use? choose 1, 2, 3, or 4 FOR EACH STAR
 compstars_good = [0,1,2,  4  ] # which comparison stars are OK? at most [0,1,2,3,4,5]
-compplot = True # set whether to plot comparison star LCs or not
+compplot =      True   # set whether to plot comparison star LCs or not
+diffmagdim =    -0.6   # plot limits used at the very end
+diffmagbright = -1.4
 
 # read in the coordinate file you used to do photometry
 xinits, yinits = np.loadtxt(dir+photcoord_file, usecols=(0,1), unpack=True)
@@ -84,16 +97,16 @@ def compstarcombine(filter, otimes, maglist, merrlist, plot = False):
         for star_idx in compstars_good: # loop over each star you want to use
             magval.append(maglist[star_idx][time_idx]) # build list of all star mags in one image
             merrval.append(merrlist[star_idx][time_idx])
-
         rms.append( np.sqrt(np.nanmean(np.power(magval,2))) ) # RMS mag for one point in time
         rmserr.append( np.sqrt(np.nanmean(np.power(merrval,2))) )
-        #rmserr.append( np.sqrt(np.mean(mag_i - mag_ref)**2) ) # nope
-
+        ##rmserr.append( np.sqrt(np.mean(mag_i - mag_ref)**2) ) # nope, but handy in other cases
         #mag_test.append(np.nanmean(magval)) # mean mag for one point in time
-        #merr_test.append(np.nanmean(merrval))
+        #merr_test.append(np.nanmean(merrval)) # mean merr for one point in time
     magcomps = rms #mag_test
     merrcomps = rmserr #merr_test
     if plot == True:
+        plt.ylabel('BACKWARDS MAGNITUDES ARE BACKWARDS') # seriously
+        plt.xlabel('Time')
         plt.errorbar(otimes, magcomps, yerr=merrcomps, ls='None', marker='o', color='k', label='RMS')
         plt.title('filter ID: '+str(filter))
         plt.legend(numpoints=1)
@@ -103,6 +116,7 @@ def compstarcombine(filter, otimes, maglist, merrlist, plot = False):
 def diffmagcalculate(mags, merrs, compmags, comperrs):
     '''
     Given magnitudes (and errors) for a target and a reference, subtract appropriately
+    Adding errors in quadrature is a good life choice too
     '''
     diffmags = mags - compmags
     differrs = np.sqrt(np.power(merrs,2) + np.power(comperrs,2))
@@ -167,7 +181,7 @@ diffIs, diffIerrs = diffmagcalculate(magIs, merrIs, magIcomps, merrIcomps)
 # Write results to file
 f1 = open(dir+outfile, 'w')
 print('# B filter', file=f1)
-print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+print('# time, phase, filter, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeBs, phaseBs, magBs, merrBs, magBcomps, merrBcomps, diffBs, diffBerrs):
     print(time, phase, 'B', mag, merr, comp, cerr, diff, derr, file=f1)
 print('# V filter', file=f1)
@@ -182,12 +196,12 @@ print('# I filter', file=f1)
 print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeIs, phaseIs, magIs, merrIs, magIcomps, merrIcomps, diffIs, diffIerrs):
     print(time, phase, 'I', mag, merr, comp, cerr, diff, derr, file=f1)
-print('Data written to {0}', outfile)
+print('Data written to {0}'.format(outfile))
 f1.close()
 
 # Plot magnitude vs. orbital phase for all four filters
 axtop = plt.subplot(2,1,1)
-axtop.set_ylim([-0.5, -2])
+axtop.set_ylim([diffmagdim, diffmagbright])
 plt.xlabel('Time (JD-2400000)')
 plt.ylabel('Differental Mag')
 plt.errorbar(otimeBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
@@ -201,7 +215,7 @@ plt.errorbar(otimeRs, magRcomps, yerr=merrRcomps, ls='None', marker='o', color='
 plt.errorbar(otimeIs, magIcomps, yerr=merrIcomps, ls='None', marker='o', color='0.75', label='Icomp')
 
 axbot = plt.subplot(2,1,2)
-plt.axis([0, 1, -0.5, -2])
+plt.axis([0, 1, diffmagdim, diffmagbright])
 plt.xlabel('Orbital Phase')
 plt.ylabel('Differental Mag')
 plt.errorbar(phaseBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
