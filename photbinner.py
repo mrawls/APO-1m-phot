@@ -4,13 +4,22 @@ import matplotlib.pyplot as plt
 '''
 Meredith Rawls, 2015
 Takes a file created by photplotter.py and bins it appropriately.
+
 '''
-dir =       '../../1m_observations/KIC03955867/'
-infile =    'BVRI_diffmag_LC.txt'
-target =    '3955867'
-period = 33.659962; BJD0 = 54960.866328 # 3955867
-time_threshold = 0.1 # time in days by which to bin observations
+# SPECIFY THESE ITEMS CORRECTLY
+#target = '03955867'
+#period = 33.659962; BJD0 = 54960.866328 # 3955867      
+#target = '09970396'
+#period = 235.30; BJD0 = 55190.482944 # 9970396
+target = '09291629'
+period = 20.686011; BJD0 = 54967.249343 # 9291629
+dir = '../../1m_observations/'+'KIC'+target+'/'
+infile =    'BVRI_diffmag_LC1.txt'
+outfile =   'BVRI_diffmag_binned_LC1.txt'
+time_threshold = 0.01 # time in days by which to bin observations
 filtlist = ['B', 'V', 'R', 'I']
+phaseoffset = False # option to offset phases by 0.5 IN PLOT ONLY
+# SPECIFY THESE ITEMS CORRECTLY
 
 def phasecalc(time, period, zeropoint):
     '''
@@ -26,6 +35,7 @@ times, phases, filters, mags, merrs, compmags, cerrs, diffmags, derrs = \
     'diffmags', 'derrs'), 'formats': (np.float64, np.float64, '|S2', np.float64, \
     np.float64, np.float64, np.float64, np.float64, np.float64)})
 
+allfilt = []; alltime = []; allphase = []; alldiff = []; allderr = []
 for filt in filtlist:
     # initialize chunk lists
     chunk = 0
@@ -70,7 +80,31 @@ for filt in filtlist:
         newcerr.append( np.sqrt(np.nanmean(np.power(cerrchunk[cdx],2))) )
         newdiff.append( np.sqrt(np.nanmean(np.power(diffmagchunk[cdx],2))) ) # RMS diffmag for one chunk
         newderr.append( np.sqrt(np.nanmean(np.power(derrchunk[cdx],2))) )
-        #print(newtime, newphase, newdiff, newderr) #newmag, newmerr, newcomp, newcerr, newdiff, newderr)
-        # SAVE THESE VALUES! PLOT THEM! CHECK IF THEY ARE CORRECT??!!
-    plt.errorbar(newphase, newdiff, yerr=newderr, ls='None', marker='o')
+        allfilt.append(filt)
+        alltime.append(newtime[cdx])
+        allphase.append(newphase[cdx])
+        alldiff.append(newdiff[cdx])
+        allderr.append(newderr[cdx])
+#    plt.errorbar(newphase, newdiff, yerr=newderr, ls='None', marker='o')
+#    plt.show()
+
+# Write results to file and make a plot
+with open(dir+outfile, 'w') as out:
+    print('# filter, UTCtime, phase, differential mag, error', file=out)
+    for filter, time, phase, diff, derr in zip(allfilt, alltime, allphase, alldiff, allderr):
+        print(filter, time, phase, diff, derr, file=out)
+        if phaseoffset == True: # offset phases so primary eclipse appears at 0.5 instead of 0 (1)
+            if phase < 0.5: phase = phase+0.5
+            else: phase = phase-0.5
+            #allphase = [p+0.5 if p < 0.5 else p-0.5 for p in allphase]
+        if filter == 'B':
+            plt.errorbar(phase, diff, yerr=derr, ls='None', marker='o', color='b', label='B')
+        elif filter == 'V':
+            plt.errorbar(phase, diff, yerr=derr, ls='None', marker='o', color='g', label='V')
+        elif filter == 'R':
+            plt.errorbar(phase, diff, yerr=derr, ls='None', marker='o', color='r', label='R')
+        elif filter == 'I':
+            plt.errorbar(phase, diff, yerr=derr, ls='None', marker='o', color='k', label='I')        
+        plt.xlabel('Orbital Phase')
+        plt.ylabel('Differental Mag')
     plt.show()
