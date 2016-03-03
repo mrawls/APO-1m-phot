@@ -15,26 +15,30 @@ You should run TXDUMP with these extracted fields on *.mag.1 (or *.mag.2, or wha
 We assume there are FOUR apertures used, ONE target star, and SIX comparison stars.
 If your needs differ, you'll need to manually edit the code. There are comments to help.
 
-!! You must manually replace any INDEF entries with NAN !! (sorry, numpy is a punk)
+!! You must manually replace any INDEF entries in txdump_file with NAN !! (thanks numpy)
 
 OUTPUT:
-Intermediate plots of comparison star magnitudes.
+Intermediate plots of comparison star magnitudes (optional).
 Plots of the target star's differential magnitude vs. time and phase.
 (The comparison star instrumental magnitudes are also plotted if you span way down! fun!)
 Outfile containing differential photometry data.
 '''
 
 # EDIT THIS STUFF AS DESIRED!!!
-dir =               '../../1m_observations/KIC03955867/'
-txdump_file =       'phot_take8.txt'
-photcoord_file =    'photcoords5.txt'
-outfile =           'BVRI_diffmag_LC.txt'
-period = 33.659962; BJD0 = 54960.866328 # 3955867
-aperturelist = [1,1,3,3,2,4,4] # which aperture to use? choose 1, 2, 3, or 4 FOR EACH STAR
-compstars_good = [0,1,2,  4  ] # which comparison stars are OK? at most [0,1,2,3,4,5]
-compplot =      True   # set whether to plot comparison star LCs or not
-diffmagdim =    -0.6   # plot limits used at the very end
-diffmagbright = -1.4
+dir =               '../../1m_observations/KIC09291629/'
+txdump_file =       'phot_take1.txt'
+photcoord_file =    'photcoords1.txt'
+outfile =           'BVRI_diffmag_LC1.txt'
+#period = 33.659962; BJD0 = 54960.866328 # 3955867
+#period = 235.30; BJD0 = 55190.482944 # 9970396
+period = 20.686011; BJD0 = 54967.249343 # 9291629
+aperturelist = [1,1,2,2,2,2,2] # which aperture to use? choose 1, 2, 3, or 4 FOR EACH STAR
+compstars_good = [0,1,2,3    ] # which comparison stars are OK? at most [0,1,2,3,4,5]
+compplot =      True    # set whether to plot comparison star LCs or not
+phaseoffset =   False   # set whether to offset phase IN FINAL PLOT ONLY by 0.5 (like ELC)
+diffmagdim =     0.0    # plot limits used at the very end
+diffmagbright = -4.0
+# EDIT THIS STUFF AS DESIRED!!!
 
 # read in the coordinate file you used to do photometry
 xinits, yinits = np.loadtxt(dir+photcoord_file, usecols=(0,1), unpack=True)
@@ -181,19 +185,19 @@ diffIs, diffIerrs = diffmagcalculate(magIs, merrIs, magIcomps, merrIcomps)
 # Write results to file
 f1 = open(dir+outfile, 'w')
 print('# B filter', file=f1)
-print('# time, phase, filter, mag, err, compmag, err, diffmag, err', file=f1)
+print('# UTCtime, phase, filter, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeBs, phaseBs, magBs, merrBs, magBcomps, merrBcomps, diffBs, diffBerrs):
     print(time, phase, 'B', mag, merr, comp, cerr, diff, derr, file=f1)
 print('# V filter', file=f1)
-print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+print('# UTCtime, phase, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeVs, phaseVs, magVs, merrVs, magVcomps, merrVcomps, diffVs, diffVerrs):
     print(time, phase, 'V', mag, merr, comp, cerr, diff, derr, file=f1)
 print('# R filter', file=f1)
-print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+print('# UTCtime, phase, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeRs, phaseRs, magRs, merrRs, magRcomps, merrRcomps, diffRs, diffRerrs):
     print(time, phase, 'R', mag, merr, comp, cerr, diff, derr, file=f1)
 print('# I filter', file=f1)
-print('# time, phase, mag, err, compmag, err, diffmag, err', file=f1)
+print('# UTCtime, phase, mag, err, compmag, err, diffmag, err', file=f1)
 for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeIs, phaseIs, magIs, merrIs, magIcomps, merrIcomps, diffIs, diffIerrs):
     print(time, phase, 'I', mag, merr, comp, cerr, diff, derr, file=f1)
 print('Data written to {0}'.format(outfile))
@@ -215,9 +219,15 @@ plt.errorbar(otimeRs, magRcomps, yerr=merrRcomps, ls='None', marker='o', color='
 plt.errorbar(otimeIs, magIcomps, yerr=merrIcomps, ls='None', marker='o', color='0.75', label='Icomp')
 
 axbot = plt.subplot(2,1,2)
-plt.axis([0, 1, diffmagdim, diffmagbright])
+axbot.set_ylim([diffmagdim, diffmagbright])
+#plt.axis([0, 1, diffmagdim, diffmagbright])
 plt.xlabel('Orbital Phase')
 plt.ylabel('Differental Mag')
+if phaseoffset == True: # offset phases so primary eclipse appears at 0.5 instead of 0 (1)
+    phaseBs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseBs]
+    phaseVs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseVs]
+    phaseRs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseRs]
+    phaseIs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseIs]
 plt.errorbar(phaseBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
 plt.errorbar(phaseVs, diffVs, yerr=diffVerrs, ls='None', marker='o', color='g', label='V')
 plt.errorbar(phaseRs, diffRs, yerr=diffRerrs, ls='None', marker='o', color='r', label='R')
