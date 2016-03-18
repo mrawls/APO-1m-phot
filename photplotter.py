@@ -25,19 +25,21 @@ Outfile containing differential photometry data.
 '''
 
 # EDIT THIS STUFF AS DESIRED!!!
-dir =               '../../1m_observations/KIC09291629/'
-txdump_file =       'phot_take1.txt'
+dir =               '../../1m_observations/KIC05786154/'
+txdump_file =       'phot_take2.txt'
 photcoord_file =    'photcoords1.txt'
-outfile =           'BVRI_diffmag_LC1.txt'
-#period = 33.659962; BJD0 = 54960.866328 # 3955867
-#period = 235.30; BJD0 = 55190.482944 # 9970396
-period = 20.686011; BJD0 = 54967.249343 # 9291629
-aperturelist = [1,1,2,2,2,2,2] # which aperture to use? choose 1, 2, 3, or 4 FOR EACH STAR
-compstars_good = [0,1,2,3    ] # which comparison stars are OK? at most [0,1,2,3,4,5]
+outfile =           'BVRI_diffmag_LC2.txt'
+# NOTE THAT 1M TELESCOPE TIMES ARE IN JD-2400000 SO ZEROPOINT SHOULD BE TOO!
+#period = 33.65685; BJD0 = 54960.8989 #3955867
+#period = 235.29852; BJD0 = 55190.5400 #9970396
+#period = 20.6864; BJD0 = 54966.891 #9291629
+period = 197.9182; BJD0 = 55162.6140 #5786154 
+#period = 19.38446; BJD0 = 54970.2139 #8702921
+#period = 120.3903; BJD0 = 54957.682 #10001167
+aperturelist = [1,2,4,4,4,4,4] # which aperture to use? choose 1, 2, 3, or 4 FOR EACH STAR
+compstars_good = [0,1,2,3,4,5] # which comparison stars are OK? at most [0,1,2,3,4,5]
 compplot =      True    # set whether to plot comparison star LCs or not
 phaseoffset =   False   # set whether to offset phase IN FINAL PLOT ONLY by 0.5 (like ELC)
-diffmagdim =     0.0    # plot limits used at the very end
-diffmagbright = -4.0
 # EDIT THIS STUFF AS DESIRED!!!
 
 # read in the coordinate file you used to do photometry
@@ -151,6 +153,8 @@ magBcomplist.extend([Binfo[2][1], Binfo[2][2], Binfo[2][3], Binfo[2][4], Binfo[2
 merrBcomplist.extend([Binfo[3][1], Binfo[3][2], Binfo[3][3], Binfo[3][4], Binfo[3][5], Binfo[3][6]])
 magBcomps, merrBcomps = compstarcombine('B', otimeBs, magBcomplist, merrBcomplist, plot = compplot)
 diffBs, diffBerrs = diffmagcalculate(magBs, merrBs, magBcomps, merrBcomps)
+diffmagdimB = np.max(diffBs)
+diffmagbrightB = np.min(diffBs)
 
 ### V filter ###
 Vinfo = readfilter(filtID = 3, aperturelist = aperturelist)
@@ -161,6 +165,8 @@ magVcomplist.extend([Vinfo[2][1], Vinfo[2][2], Vinfo[2][3], Vinfo[2][4], Vinfo[2
 merrVcomplist.extend([Vinfo[3][1], Vinfo[3][2], Vinfo[3][3], Vinfo[3][4], Vinfo[3][5], Vinfo[3][6]])
 magVcomps, merrVcomps = compstarcombine('V', otimeVs, magVcomplist, merrVcomplist, plot = compplot)
 diffVs, diffVerrs = diffmagcalculate(magVs, merrVs, magVcomps, merrVcomps)
+diffmagdimV = np.max(diffVs)
+diffmagbrightV = np.min(diffVs)
 
 ### R filter ###
 Rinfo = readfilter(filtID = 4, aperturelist = aperturelist)
@@ -171,6 +177,8 @@ magRcomplist.extend([Rinfo[2][1], Rinfo[2][2], Rinfo[2][3], Rinfo[2][4], Rinfo[2
 merrRcomplist.extend([Rinfo[3][1], Rinfo[3][2], Rinfo[3][3], Rinfo[3][4], Rinfo[3][5], Rinfo[3][6]])
 magRcomps, merrRcomps = compstarcombine('R', otimeRs, magRcomplist, merrRcomplist, plot = compplot)
 diffRs, diffRerrs = diffmagcalculate(magRs, merrRs, magRcomps, merrRcomps)
+diffmagdimR = np.max(diffRs)
+diffmagbrightR = np.min(diffRs)
 
 ### I filter ###
 Iinfo = readfilter(filtID = 6, aperturelist = aperturelist)
@@ -181,6 +189,12 @@ magIcomplist.extend([Iinfo[2][1], Iinfo[2][2], Iinfo[2][3], Iinfo[2][4], Iinfo[2
 merrIcomplist.extend([Iinfo[3][1], Iinfo[3][2], Iinfo[3][3], Iinfo[3][4], Iinfo[3][5], Iinfo[3][6]])
 magIcomps, merrIcomps = compstarcombine('I', otimeIs, magIcomplist, merrIcomplist, plot = compplot)
 diffIs, diffIerrs = diffmagcalculate(magIs, merrIs, magIcomps, merrIcomps)
+diffmagdimI = np.max(diffIs)
+diffmagbrightI = np.min(diffIs)
+
+# set sensible plot limits
+diffmagdim = np.max([diffmagdimB, diffmagdimV, diffmagdimR, diffmagdimI])+0.2
+diffmagbright = np.min([diffmagbrightB, diffmagbrightV, diffmagbrightR, diffmagbrightI])-0.2
 
 # Write results to file
 f1 = open(dir+outfile, 'w')
@@ -203,7 +217,7 @@ for time, phase, mag, merr, comp, cerr, diff, derr in zip(otimeIs, phaseIs, magI
 print('Data written to {0}'.format(outfile))
 f1.close()
 
-# Plot magnitude vs. orbital phase for all four filters
+# Plot magnitude vs. time for all four filters
 axtop = plt.subplot(2,1,1)
 axtop.set_ylim([diffmagdim, diffmagbright])
 plt.xlabel('Time (JD-2400000)')
@@ -218,9 +232,10 @@ plt.errorbar(otimeVs, magVcomps, yerr=merrVcomps, ls='None', marker='o', color='
 plt.errorbar(otimeRs, magRcomps, yerr=merrRcomps, ls='None', marker='o', color='m', label='Rcomp')
 plt.errorbar(otimeIs, magIcomps, yerr=merrIcomps, ls='None', marker='o', color='0.75', label='Icomp')
 
+# Plot magnitude vs. orbital phase for all four filters
 axbot = plt.subplot(2,1,2)
 axbot.set_ylim([diffmagdim, diffmagbright])
-#plt.axis([0, 1, diffmagdim, diffmagbright])
+axbot.set_xlim([0, 1])
 plt.xlabel('Orbital Phase')
 plt.ylabel('Differental Mag')
 if phaseoffset == True: # offset phases so primary eclipse appears at 0.5 instead of 0 (1)
@@ -228,6 +243,7 @@ if phaseoffset == True: # offset phases so primary eclipse appears at 0.5 instea
     phaseVs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseVs]
     phaseRs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseRs]
     phaseIs = [phase+0.5 if phase < 0.5 else phase-0.5 for phase in phaseIs]
+
 plt.errorbar(phaseBs, diffBs, yerr=diffBerrs, ls='None', marker='o', color='b', label='B')
 plt.errorbar(phaseVs, diffVs, yerr=diffVerrs, ls='None', marker='o', color='g', label='V')
 plt.errorbar(phaseRs, diffRs, yerr=diffRerrs, ls='None', marker='o', color='r', label='R')

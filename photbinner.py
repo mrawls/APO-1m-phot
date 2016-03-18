@@ -7,15 +7,15 @@ Takes a file created by photplotter.py and bins it appropriately.
 
 '''
 # SPECIFY THESE ITEMS CORRECTLY
-#target = '03955867'
-#period = 33.659962; BJD0 = 54960.866328 # 3955867      
-#target = '09970396'
-#period = 235.30; BJD0 = 55190.482944 # 9970396
-target = '09291629'
-period = 20.686011; BJD0 = 54967.249343 # 9291629
-dir = '../../1m_observations/'+'KIC'+target+'/'
-infile =    'BVRI_diffmag_LC1.txt'
-outfile =   'BVRI_diffmag_binned_LC1.txt'
+#period = 33.65685; BJD0 = 54960.8989;  target = '03955867'
+#period = 235.29852; BJD0 = 55190.5400; target = '09970396'
+#period = 20.6864; BJD0 = 54966.891;    target = '09291629'
+period = 197.9182; BJD0 = 55162.6140;  target = '05786154'
+#period = 19.38446; BJD0 = 54970.2139;  target = '08702921'
+#period = 120.3903; BJD0 = 54957.682;    target = '10001167'
+dir = '../../1m_observations/KIC'+target+'/'
+infile =    'BVRI_diffmag_LC2.txt'
+outfile =   'BVRI_diffmag_binned_LC2.txt'
 time_threshold = 0.01 # time in days by which to bin observations
 filtlist = ['B', 'V', 'R', 'I']
 phaseoffset = False # option to offset phases by 0.5 IN PLOT ONLY
@@ -72,7 +72,7 @@ for filt in filtlist:
     for cdx, time in enumerate(timechunk):
         # cdx is chunk index
         # calculate rms for magnitude data points, one per chunk
-        newtime.append( (timechunk[cdx][0] + timechunk[cdx][-1]) / 2. )
+        newtime.append( (timechunk[cdx][0] + timechunk[cdx][-1]) / 2. ) # FAILS IF DATA NOT TIME SORTED
         newphase.append( phasecalc((timechunk[cdx][0] + timechunk[cdx][-1]) / 2., period, BJD0) )
         newmag.append( np.sqrt(np.nanmean(np.power(magchunk[cdx],2))) ) # RMS mag for one chunk
         newmerr.append( np.sqrt(np.nanmean(np.power(merrchunk[cdx],2))) )
@@ -106,5 +106,5 @@ with open(dir+outfile, 'w') as out:
         elif filter == 'I':
             plt.errorbar(phase, diff, yerr=derr, ls='None', marker='o', color='k', label='I')        
         plt.xlabel('Orbital Phase')
-        plt.ylabel('Differental Mag')
+        plt.ylabel('BACKWARDS MAGNITUDE IS BACKWARDS')
     plt.show()
