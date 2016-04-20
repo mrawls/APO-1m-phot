@@ -17,9 +17,9 @@ infile = 'RGEB_distinfo.txt'
 target_col = 0
 RA_col = 3
 Dec_col = 4
-dist_col = 6
-derr_col = 7
-FeH_col = 8
+dist_col = 7
+derr_col = 8
+FeH_col = 6
 usecols = (target_col, RA_col, Dec_col, dist_col, derr_col, FeH_col)
 
 # Read in target information from a text file
